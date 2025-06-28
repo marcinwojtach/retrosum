@@ -1,0 +1,44 @@
+@using RetroSum.Data.Models
+@using RetroSum.Data.Services
+@inject RetroService RetroService
+
+<h3>Retros</h3>
+
+@if (retros == null)
+{
+    <p><em>Loading retros...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var retro in retros)
+        {
+            <tr>
+                <td>@retro.Title</td>
+                <td>@retro.Description</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<RetroItem> retros = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRetros();
+    }
+
+    private async Task LoadRetros()
+    {
+        retros = await RetroService.GetAll();
+    }
+}
