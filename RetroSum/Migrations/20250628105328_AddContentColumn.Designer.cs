@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RetroSum.Data.Context;
 
@@ -10,9 +11,11 @@ using RetroSum.Data.Context;
 namespace RetroSum.Migrations
 {
     [DbContext(typeof(RetroSumContext))]
-    partial class RetroSumContextModelSnapshot : ModelSnapshot
+    [Migration("20250628105328_AddContentColumn")]
+    partial class AddContentColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
