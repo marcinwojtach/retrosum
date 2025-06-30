@@ -1,32 +1,54 @@
 @using RetroSum.Data.Models
 @using RetroSum.Data.Services
 @inject RetroService RetroService
+@inject NavigationManager NavigationManager
 
-<h3>Retros</h3>
+<header class="retros-header">
+    <div>
+        <h1>Retro Sum</h1>
+        <p>Your code retrospections made easy.</p>
+    </div>
+    <div>
+        <button class="btn-md" @onclick="() => OnOpenSessionClick(0)">Create new</button>
+    </div>
+</header>
+
+<hr/>
 
 @if (retros == null)
 {
     <p><em>Loading retros...</em></p>
 }
+else if (retros.Count == 0)
+{
+    <p>No retro sessions added yet.</p> 
+}
 else
 {
-    <table class="table">
-        <thead>
-        <tr>
-            <th>Title</th>
-            <th>Description</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var retro in retros)
-        {
+    <section>
+        <table class="table">
+            <thead>
             <tr>
-                <td>@retro.Title</td>
-                <td>@retro.Description</td>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Date added</th>
+                <th colspan="2">...</th>
             </tr>
-        }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            @foreach (var retro in retros)
+            {
+                <tr>
+                    <td>@retro.Title</td>
+                    <td>@retro.Description</td>
+                    <td>@retro.CreatedAt</td>
+                    <td><button @onclick="() => OnOpenSessionClick(retro.Id)">Open session</button></td>
+                    <td><button class="btn-danger" @onclick="() => OnRemoveClick(retro.Id)">X</button></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
 }
 
 @code {
@@ -37,8 +59,21 @@ else
         await LoadRetros();
     }
 
+    private void OnOpenSessionClick(int id)
+    {
+        NavigationManager.NavigateTo("/session/" + id);        
+    }
+
     private async Task LoadRetros()
     {
         retros = await RetroService.GetAll();
+    }
+
+    private async void OnRemoveClick(int id)
+    {
+        var removed = await RetroService.Remove(id);
+
+        if (removed != null)
+            retros.Remove(removed);
     }
 }

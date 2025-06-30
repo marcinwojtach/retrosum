@@ -13,4 +13,8 @@ public class RetroItem : BaseEntity
     [Required(ErrorMessage = "Description is required")]
     [MaxLength(1000)]
     public string? Description { get; set; } = string.Empty;
+    
+    [Required(ErrorMessage = "Content is required")]
+    [MaxLength(10000)]
+    public string? Content { get; set; } = string.Empty;
 }

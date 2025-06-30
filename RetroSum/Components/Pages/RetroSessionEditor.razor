@@ -1,0 +1,197 @@
+@page "/session"
+@page "/session/{SessionId:int}"
+
+@using BlazorMonaco.Editor
+@using RetroSum.Data.Models
+@using RetroSum.Data.Services
+
+@implements IDisposable
+
+@inject RetroService RetroService
+@inject NavigationManager NavigationManager
+
+@inject IJSRuntime JS
+
+@if (IsNewModel())
+{
+    <h1>Create new session</h1>
+}
+
+<div class="retro-session-form">
+    <EditForm EditContext="_editContext" OnValidSubmit="Submit" FormName="RetroForm">
+        <div>
+            <label>
+                Title
+                <InputText @bind-Value="Model!.Title"/>
+            </label>
+        </div>
+
+        <div>
+            <label>
+                Description
+                <InputText @bind-Value="Model!.Description"/>
+            </label>
+        </div>
+        
+        <sup>JavaScript</sup>
+        <StandaloneCodeEditor Id="code-editor"
+                              @ref="_editor"
+                              ConstructionOptions="EditorConstructionOptions"
+                              OnDidChangeModelContent="EditorContentChanged" />
+        <small>Pro tip: use return statement to write output</small>
+    
+        <div class="errors">
+            <ValidationMessage For="() => Model!.Title" />
+            <ValidationMessage For="() => Model!.Description" />
+            <ValidationMessage For="() => Model!.Content" />
+        </div>
+        
+        
+        <div class="button-row">
+            <button @onclick="OnGoBack" class="btn-alt btn-md" type="button">Go Back</button>
+            
+            @if (IsNewModel())
+            {
+                <button type="submit" class="btn-md">
+                    Save
+                </button>
+            }
+            else
+            {
+                <button type="submit" class="btn-md">
+                    Update
+                </button>
+            }
+            
+            <button @onclick="OnCodeRun" type="button" class="btn-success btn-md">Run code</button>
+        </div>
+    </EditForm>
+    
+    @if (ShowRuntime)
+    {
+        <p>Output:</p>
+        <code class="code-output-box">
+            <div id="code-output"></div>
+        </code>
+    }
+</div>
+
+@code {
+    [Parameter] public int SessionId { get; set; }
+
+    [SupplyParameterFromForm] private RetroItem? Model { get; set; }
+
+    private EditContext? _editContext;
+
+    private ValidationMessageStore? _messageStore;
+
+    private StandaloneCodeEditor _editor;
+
+    private bool ShowRuntime = false;
+
+    public void Dispose()
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnValidationRequested -= HandleValidationRequested;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model ??= new();
+        _editContext = new(Model);
+        _editContext.OnValidationRequested += HandleValidationRequested;
+        _messageStore = new(_editContext);
+
+        if (SessionId > 0)
+            Model = await RetroService.GetById(SessionId);
+    }
+
+    private async void HandleValidationRequested(object? sender,
+        ValidationRequestedEventArgs args)
+    {
+        _messageStore?.Clear();
+
+        if (Model!.Title == "")
+            _messageStore?.Add(() => Model.Title, "Title can not be empty");
+
+        if (Model!.Description == "")
+            _messageStore?.Add(() => Model.Description, "Description can not be empty");
+
+        try
+        {
+            var value = await _editor.GetValue();
+            if (value == "")
+            {
+                _messageStore?.Add(() => Model.Content, "Content can not be empty");
+            }
+        }
+        catch (AggregateException ae)
+        {
+            Console.WriteLine("Error while reading editor value");
+        }
+    }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "javascript",
+            Value = Model!.Content ?? "Console.WriteLine(\"Hello world!\")",
+            Theme = "hc-light"
+        };
+    }
+
+    private async void EditorContentChanged(ModelContentChangedEvent eventArgs)
+    {
+        try
+        {
+            Model!.Content = await _editor.GetValue();
+        }
+        catch (AggregateException ae)
+        {
+            Console.WriteLine("Error while reading editor value");
+        }
+    }
+
+    private async void Submit()
+    {
+        if (SessionId != 0)
+        {
+            await RetroService.Update(Model);
+            return;
+        }
+
+        var model = await RetroService.Save(Model);
+
+        if (model.Id != 0)
+        {
+            NavigationManager.NavigateTo("/session/" + Model.Id);
+        }
+    }
+
+    private bool IsNewModel()
+    {
+        return Model.Id == 0;
+    }
+
+    private void OnGoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private async void OnCodeRun()
+    {
+        ShowRuntime = true;
+        try
+        {
+            JS.InvokeVoidAsync("runScripts", await _editor.GetValue());
+        }
+        catch (AggregateException ae)
+        {
+            Console.WriteLine("Error while running code");
+        }
+    }
+}
